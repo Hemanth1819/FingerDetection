@@ -1,0 +1,38 @@
+!pip install opencv-python mediapipe protobuf==3.20.3
+import cv2
+import mediapipe as mp
+import numpy as np
+import os
+os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] ='python'
+mp_hands=mp.solutions.hands
+mp_drawing=mp.solutions.drawing_utils
+def count_fingers(hand_landmarks):
+    finger_tips_ids=[4,8,12,16,20]
+    base_joints_ids=[2,5,9,13,17]
+    fingers_up=0
+    for tip_id, base_id in zip(finger_tips_ids, base_joints_ids):
+        tip_y=hand_landmarks.landmark[tip_id].y
+        base_y=hand_landmarks.landmark[base_id].y
+        if tip_y<base_y: 
+            fingers_up+=1
+    return fingers_up
+cap=cv2.VideoCapture(0)
+hands=mp_hands.Hands()
+while True:
+    ret,frame=cap.read()
+    if not ret:
+        break
+    frame=cv2.flip(frame, 1)
+    height, width,_= frame.shape
+    rgb_frame=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results=hands.process(rgb_frame)
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            num_fingers=count_fingers(hand_landmarks)
+            cv2.putText(frame, f'Fingers: {num_fingers}',(10,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+    cv2.imshow('Hand Gesture Recognition',frame)
+    if cv2.waitKey(1)&0xFF==ord('q'):
+        break
+cap.release()
+cv2.destroyAllWindows()
